@@ -1,0 +1,49 @@
+def is_sat(cnf):
+    str_clauses = cnf.translate(str.maketrans("", "", "() ")).split("/\\")
+    vars = {x for x in cnf if x in "abcdefghijklmnopqrstuvwxyz"}
+    clauses = []
+    for str_clause in str_clauses:
+        if "->" in str_clause: ## <lit1 -> lit2>
+            a,b = str_clause.split("->")
+            clauses.append(set((negate(a), b)))
+        elif "/" in str_clause: ## <lit1 / ... / litn>
+            clauses.append(set(str_clause.split("/")))
+        else: ##<lit1>
+            clauses.append(set([str_clause]))
+    for var in vars:
+        ##remove tautologies
+        tautology = set((var, negate(var)))
+        for i,clause in enumerate(clauses[:]):
+            if tautology == clause:
+                del clauses[i]
+            elif tautology < clause:
+                clause -= tautology
+        if not clauses:
+            return True
+        ##resolutions
+        asserting = [i for i,c in enumerate(clauses) if var in c]
+        negating = [i for i,c in enumerate(clauses) if negate(var) in c]
+        while asserting and negating:
+            if asserting[-1] > negating[-1]:
+                x, y = asserting[-1], negating[-1]
+                del asserting[-1]
+                del negating[-1]
+            else:
+                y, x = asserting[-1], negating[-1]
+                del negating[-1]
+                del asserting[-1]
+            resolved = (clauses[x] | clauses[y]) - tautology
+            if not resolved:
+                return False
+            print(f'resolution: {clauses[x]}, {clauses[y]} => {resolved}')
+            del clauses[x]
+            del clauses[y]
+            clauses.append(resolved)
+    else:
+        return True
+
+def negate(s):
+    if s[0] == '~':
+        return s[1:]
+    else:
+        return '~' + s
